@@ -1,27 +1,39 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { RegisterDto, LoginDto } from './dto/user.dto';
-// import { Response } from 'express';
+import { PrismaService } from '../../../prisma/Prisma.service';
+
+
+import { Response } from 'express';
 
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly jstService: JwtService,
-    // private readonly prisma:
+    private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {}
 
   //register user
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto, response: Response ) {
     const { name, email, password } = registerDto;
-    const user = {
-      name,
-      email,
-      password,
-    };
-    return user;
+		const isEmailExist = await this.prisma.user.findUnique({
+			where: {email,}
+		})
+
+		if(isEmailExist) {
+			throw new BadRequestException("user already registered");
+		}
+    const user = await this.prisma.user.create({
+			data: {
+				name,
+        email,
+        password
+			}
+		})
+    return {user, response};
   }
 
   //login service
@@ -36,10 +48,6 @@ export class UsersService {
 
 	//get all user sevice 
 	async getUsers(){
-		const user = [
-			{ id: 1, name: 'John Doe', email: 'john.doe@example.com', password: '1234567F'  },
-      //... more users...
-		];
-		return user;
+		return this.prisma.user.findMany;
 	}
 }
